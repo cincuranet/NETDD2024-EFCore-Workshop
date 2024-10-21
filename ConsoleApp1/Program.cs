@@ -30,10 +30,10 @@ class DogOwnersClubContext : DbContext
     }
 }
 
-[Table("T_OWNER")]
+//[Table("T_OWNER")]
 class Person
 {
-    [Key]
+    //[Key]
     public int Id { get; set; }
     public string Name { get; set; } = null!;
     public ICollection<Dog> Dogs { get; set; } = [];
