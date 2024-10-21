@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using var db = new DogOwnersClubContext();
 await db.Database.EnsureDeletedAsync();
 await db.Database.EnsureCreatedAsync();
-var p = new Person { Name = new FullName { FirstName = "John", LastName = "Doe", foo = new Foo { Bar = "Test" } }, Duration = new Duration(1, 2) };
+var p = new Person { Name = new FullName { FirstName = "John", LastName = "Doe" } };
 db.Add(p);
 //db.Add(new Dog()
 //{
@@ -38,23 +38,13 @@ class DogOwnersClubContext : DbContext
         modelBuilder.ApplyConfiguration(new PersonConfiguration());
         modelBuilder.ApplyConfiguration(new DogConfiguration());
 
-        //modelBuilder.Entity<BigDog>(b =>
-        //{
-        //    b.UseTphMappingStrategy();
-        //    b.HasDiscriminator<string>("D")
-        //        .HasValue<BigDog>("B");
-        //});
-        //modelBuilder.Entity<SmallDog>(b =>
-        //{
-        //    b.UseTphMappingStrategy();
-        //    b.HasDiscriminator<string>("D")
-        //        .HasValue<SmallDog>("S");
-        //});
-        modelBuilder.Entity<BigDog>(b =>
+        modelBuilder.Entity<Dog2Person>(b =>
         {
-        });
-        modelBuilder.Entity<SmallDog>(b =>
-        {
+            b.HasKey(x => new { x.DogId, x.PersonId });
+            b.HasOne(x => x.Dog)
+                .WithMany(x => x.D2P);
+            b.HasOne(x => x.Person)
+                .WithMany(x => x.D2P);
         });
     }
 
@@ -72,29 +62,23 @@ class Person
 {
     public int Id { get; set; }
     public FullName Name { get; set; } = null!;
-    public ICollection<Dog> Dogs { get; set; } = [];
-    public Duration Duration { get; set; } = null!;
+    //public ICollection<Dog> Dogs { get; set; } = [];
+    public ICollection<Dog2Person> D2P { get; set; } = [];
 }
-abstract class Dog
+class Dog
 {
     public int Id { get; set; }
     public DateOnly DOB { get; set; }
-    public Person Owner { get; set; } = null!;
+    //public ICollection<Person> Owners { get; set; } = [];
+    public ICollection<Dog2Person> D2P { get; set; } = [];
 }
-class BigDog : Dog
+class Dog2Person
 {
-    public int Weight { get; set; }
-}
-class SmallDog : Dog
-{
-    public int Dummy { get; set; }
-}
-
-class ShowResult
-{
-    public int Id { get; set; }
-    public int Rating { get; set; }
-    public string Comment { get; set; } = null!;
+    public int DogId { get; set; }
+    public int PersonId { get; set; }
+    public Dog Dog { get; set; } = null!;
+    public Person Person { get; set; } = null!;
+    public DateTime Created { get; set; }
 }
 
 class PersonConfiguration : IEntityTypeConfiguration<Person>
@@ -102,27 +86,21 @@ class PersonConfiguration : IEntityTypeConfiguration<Person>
     public void Configure(EntityTypeBuilder<Person> builder)
     {
         builder.HasKey(x => x.Id);
+        builder.ComplexProperty(x => x.Name);
         builder.ToTable("Owners");
-        builder.OwnsOne(x => x.Duration).ToJson();
-        builder.ComplexProperty(x => x.Name, x => x.ComplexProperty(y => y.foo));
     }
 }
 class DogConfiguration : IEntityTypeConfiguration<Dog>
 {
     public void Configure(EntityTypeBuilder<Dog> builder)
     {
-        builder.UseTpcMappingStrategy();
+        //builder.HasMany(x => x.Owners)
+        //    .WithMany(x => x.Dogs);
     }
 }
 
-record Duration(int Minutes, int Seconds);
 class FullName
 {
     public string FirstName { get; set; }
     public string LastName { get; set; }
-    public Foo foo { get; set; }
-}
-class Foo
-{
-    public string Bar { get; set; }
 }
