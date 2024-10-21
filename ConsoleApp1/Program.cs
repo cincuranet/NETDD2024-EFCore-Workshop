@@ -1,27 +1,33 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.Contracts;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 using var db = new DogOwnersClubContext();
-await db.Database.EnsureDeletedAsync();
-await db.Database.EnsureCreatedAsync();
-for (var i = 0; i < 3; i++)
+//await db.Database.EnsureDeletedAsync();
+//await db.Database.EnsureCreatedAsync();
+//for (var i = 0; i < 3; i++)
+//{
+//    var p = new Person { Name = new FullName { FirstName = "John", LastName = "Doe" } };
+//    db.Add(p);
+//}
+//db.SaveChanges();
+var owner = db.Owners.Where(x => x.Id == 2).First();
+owner.Name.LastName = DateTime.Now.Ticks.ToString();
+while (true)
 {
-    var p = new Person { Name = new FullName { FirstName = "John", LastName = "Doe" } };
-    db.Add(p);
+    try
+    {
+        db.SaveChanges();
+        break;
+    }
+    catch (DbUpdateConcurrencyException ex)
+    {
+        foreach (var entry in ex.Entries)
+        {
+            //entry.Reload();
+            entry.OriginalValues.SetValues(entry.GetDatabaseValues()!);
+        }
+    }
 }
-db.SaveChanges();
-foreach (var owner in db.Owners.ToArray())
-{
-    if (owner.Name.FirstName.StartsWith("A"))
-        continue;
-    db.Entry(owner).Collection(x => x.Dogs).Load();
-    Console.WriteLine(owner.Dogs);
-}
-db.Owners.Include(x => x.Dogs).AsSingleQuery();
 
 class DogOwnersClubContext : DbContext
 {
@@ -40,7 +46,8 @@ class DogOwnersClubContext : DbContext
     {
         base.OnConfiguring(optionsBuilder);
 
-        optionsBuilder.UseSqlServer("Data Source=2001:67c:d74:66:5cbb:f6ff:fe9e:eefa;Database=dogs;User=sa;Password=Pa$$w0rd;Connect Timeout=10;ConnectRetryCount=0;TrustServerCertificate=true");
+        optionsBuilder.UseSqlServer("Data Source=2001:67c:d74:66:5cbb:f6ff:fe9e:eefa;Database=dogs;User=sa;Password=Pa$$w0rd;Connect Timeout=10;ConnectRetryCount=0;TrustServerCertificate=true",
+            o => o.MaxBatchSize(2));
         optionsBuilder.LogTo(Console.WriteLine);
         optionsBuilder.EnableSensitiveDataLogging();
     }
@@ -51,6 +58,7 @@ class Person
     public int Id { get; set; }
     public FullName Name { get; set; } = null!;
     public ICollection<Dog> Dogs { get; set; } = [];
+    public byte[] Version { get; set; } = null!;
 }
 class Dog
 {
@@ -67,6 +75,10 @@ class PersonConfiguration : IEntityTypeConfiguration<Person>
         builder.Property(x => x.Id).UseHiLo();
         builder.ComplexProperty(x => x.Name);
         builder.ToTable("Owners");
+        builder.Property(x => x.Version)
+            .HasColumnType("timestamp")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
     }
 }
 class DogConfiguration : IEntityTypeConfiguration<Dog>
