@@ -13,6 +13,12 @@ await db.Database.EnsureCreatedAsync();
 //var o = new Person();
 //db.Add(o);
 //db.Entry(o).Property<DateTime>("LastUpdated").CurrentValue = DateTime.Now;
+db.Set<Dictionary<string, object>>("FooBar").Add(new Dictionary<string, object>
+{
+    ["Id"] = 1,
+    ["Value"] = "Foo",
+    ["Created"] = DateTime.Now
+});
 
 class DogOwnersClubContext : DbContext
 {
@@ -31,6 +37,16 @@ class DogOwnersClubContext : DbContext
             b.IndexerProperty<int>("Id");
             b.IndexerProperty<string>("Value");
             b.IndexerProperty<DateTime>("Created");
+        });
+        modelBuilder.SharedTypeEntity<Dictionary<string, object>>("Joe", b =>
+        {
+            b.IndexerProperty<int>("Id");
+            b.IndexerProperty<string>("Value");
+            b.IndexerProperty<DateTime>("Created");
+            b.HasMany("FooBars")
+                .WithOne("Joe")
+                .HasForeignKey("_joeId")
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 
