@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -21,6 +22,7 @@ class DogOwnersClubContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new PersonConfiguration());
+        modelBuilder.ApplyConfiguration(new DogConfiguration());
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -45,6 +47,14 @@ class Dog
     public int Id { get; set; }
     public DateOnly DOB { get; set; }
     public Person Owner { get; set; } = null!;
+    public ICollection<ShowResult> ShowResults { get; set; } = [];
+}
+
+class ShowResult
+{
+    public int Id { get; set; }
+    public int Rating { get; set; }
+    public string Comment { get; set; } = null!;
 }
 
 class PersonConfiguration : IEntityTypeConfiguration<Person>
@@ -57,6 +67,13 @@ class PersonConfiguration : IEntityTypeConfiguration<Person>
             .IsUnicode();
         builder.ToTable("Owners");
         builder.OwnsOne(x => x.Duration).ToJson();
+    }
+}
+class DogConfiguration : IEntityTypeConfiguration<Dog>
+{
+    public void Configure(EntityTypeBuilder<Dog> builder)
+    {
+        builder.OwnsMany(x => x.ShowResults).ToJson();
     }
 }
 
