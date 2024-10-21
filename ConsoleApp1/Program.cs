@@ -1,9 +1,11 @@
-﻿// See https://aka.ms/new-console-template for more information
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
-Console.WriteLine("Hello, World!");
+using var db = new DogOwnersClubContext();
+await db.Database.EnsureDeletedAsync();
+await db.Database.EnsureCreatedAsync();
 
-class DogOwnersClub : DbContext
+
+class DogOwnersClubContext : DbContext
 {
     public DbSet<Person> Owners { get; set; }
     public DbSet<Dog> Dogs { get; set; }
@@ -16,6 +18,10 @@ class DogOwnersClub : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         base.OnConfiguring(optionsBuilder);
+
+        optionsBuilder.UseSqlServer("Data Source=2001:67c:d74:66:5cbb:f6ff:fe9e:eefa;Database=dogs;User=sa;Password=Pa$$w0rd;Connect Timeout=10;ConnectRetryCount=0;TrustServerCertificate=true");
+        optionsBuilder.LogTo(Console.WriteLine);
+        optionsBuilder.EnableSensitiveDataLogging();
     }
 }
 
