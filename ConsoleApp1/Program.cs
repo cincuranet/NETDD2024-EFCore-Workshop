@@ -21,9 +21,9 @@ db.Add(p);
 //db.Owners.Where(x => x.Name.FirstName.StartsWith("A")).Load();
 //db.Owners.Where(x => x.Duration.Minutes > 10).Load();
 //db.Dogs.Where(x => x.VetVisits.Last() < DateOnly.FromDateTime(DateTime.Now.AddDays(-90))).Load();
-db.Add(new BigDog { DOB = new DateOnly(2021, 1, 1), Weight = 10, Owner = p });
-db.SaveChanges();
-db.Dogs.Where(x => x is SmallDog).Load();
+//db.Add(new BigDog { DOB = new DateOnly(2021, 1, 1), Weight = 10, Owner = p });
+//db.SaveChanges();
+//db.Dogs.OrderBy(x => x is BigDog ? (x as BigDog).Weight : x is SmallDog ? (x as SmallDog).Dummy : 0).Load();
 
 
 class DogOwnersClubContext : DbContext
@@ -87,7 +87,7 @@ class BigDog : Dog
 }
 class SmallDog : Dog
 {
-    public float Dummy { get; set; }
+    public int Dummy { get; set; }
 }
 
 class ShowResult
