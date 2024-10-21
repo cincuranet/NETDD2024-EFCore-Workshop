@@ -10,8 +10,9 @@ using var db = new DogOwnersClubContext();
 //    db.Add(p);
 //}
 //db.SaveChanges();
-var owner = db.Owners.Where(x => x.Id == 2).First();
+var owner = db.Owners.Where(x => x.Id == 2).AsNoTrackingWithIdentityResolution().First();
 owner.Name.LastName = DateTime.Now.Ticks.ToString();
+db.Owners.ExecuteDelete
 while (true)
 {
     try
@@ -51,14 +52,28 @@ class DogOwnersClubContext : DbContext
         optionsBuilder.LogTo(Console.WriteLine);
         optionsBuilder.EnableSensitiveDataLogging();
     }
+
+    public override int SaveChanges()
+    {
+        ChangeTracker.DetectChanges();
+        foreach(var item in ChangeTracker.Entries().Where(x => x.State == EntityState.Modified))
+        {
+            if (item.Entity is IAuditEntity audit)
+            {
+                audit.ModifiedAt = DateTimeOffset.Now;
+            }
+        }
+        return base.SaveChanges();
+    }
 }
 
-class Person
+class Person : IAuditEntity
 {
     public int Id { get; set; }
     public FullName Name { get; set; } = null!;
     public ICollection<Dog> Dogs { get; set; } = [];
     public byte[] Version { get; set; } = null!;
+    public DateTimeOffset ModifiedAt { get; set; }
 }
 class Dog
 {
@@ -92,4 +107,9 @@ class FullName
 {
     public string FirstName { get; set; }
     public string LastName { get; set; }
+}
+
+interface IAuditEntity
+{
+    DateTimeOffset ModifiedAt { get; set; }
 }
