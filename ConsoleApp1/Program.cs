@@ -8,23 +8,20 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using var db = new DogOwnersClubContext();
 await db.Database.EnsureDeletedAsync();
 await db.Database.EnsureCreatedAsync();
-var p = new Person { Name = new FullName { FirstName = "John", LastName = "Doe" } };
-db.Add(p);
-//db.Add(new Dog()
-//{
-//    Owner = p,
-//    DOB = new DateOnly(2021, 1, 1),
-//    ShowResults = [new ShowResult { Rating = 1, Comment = "Good" }],
-//    VetVisits = [new DateOnly(2021, 1, 1), new DateOnly(2021, 1, 1)],
-//});
-//db.SaveChanges();
-//db.Owners.Where(x => x.Name.FirstName.StartsWith("A")).Load();
-//db.Owners.Where(x => x.Duration.Minutes > 10).Load();
-//db.Dogs.Where(x => x.VetVisits.Last() < DateOnly.FromDateTime(DateTime.Now.AddDays(-90))).Load();
-//db.Add(new BigDog { DOB = new DateOnly(2021, 1, 1), Weight = 10, Owner = p });
-//db.SaveChanges();
-//db.Dogs.OrderBy(x => x is BigDog ? (x as BigDog).Weight : x is SmallDog ? (x as SmallDog).Dummy : 0).Load();
-
+for (var i = 0; i < 3; i++)
+{
+    var p = new Person { Name = new FullName { FirstName = "John", LastName = "Doe" } };
+    db.Add(p);
+}
+db.SaveChanges();
+foreach (var owner in db.Owners.ToArray())
+{
+    if (owner.Name.FirstName.StartsWith("A"))
+        continue;
+    db.Entry(owner).Collection(x => x.Dogs).Load();
+    Console.WriteLine(owner.Dogs);
+}
+db.Owners.Include(x => x.Dogs).AsSingleQuery();
 
 class DogOwnersClubContext : DbContext
 {
@@ -37,15 +34,6 @@ class DogOwnersClubContext : DbContext
 
         modelBuilder.ApplyConfiguration(new PersonConfiguration());
         modelBuilder.ApplyConfiguration(new DogConfiguration());
-
-        modelBuilder.Entity<Dog2Person>(b =>
-        {
-            b.HasKey(x => new { x.DogId, x.PersonId });
-            b.HasOne(x => x.Dog)
-                .WithMany(x => x.D2P);
-            b.HasOne(x => x.Person)
-                .WithMany(x => x.D2P);
-        });
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -62,23 +50,13 @@ class Person
 {
     public int Id { get; set; }
     public FullName Name { get; set; } = null!;
-    //public ICollection<Dog> Dogs { get; set; } = [];
-    public ICollection<Dog2Person> D2P { get; set; } = [];
+    public ICollection<Dog> Dogs { get; set; } = [];
 }
 class Dog
 {
     public int Id { get; set; }
     public DateOnly DOB { get; set; }
-    //public ICollection<Person> Owners { get; set; } = [];
-    public ICollection<Dog2Person> D2P { get; set; } = [];
-}
-class Dog2Person
-{
-    public int DogId { get; set; }
-    public int PersonId { get; set; }
-    public Dog Dog { get; set; } = null!;
-    public Person Person { get; set; } = null!;
-    public DateTime Created { get; set; }
+    public Person Owner { get; set; } = null!;
 }
 
 class PersonConfiguration : IEntityTypeConfiguration<Person>
@@ -86,6 +64,7 @@ class PersonConfiguration : IEntityTypeConfiguration<Person>
     public void Configure(EntityTypeBuilder<Person> builder)
     {
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).UseHiLo();
         builder.ComplexProperty(x => x.Name);
         builder.ToTable("Owners");
     }
@@ -94,8 +73,6 @@ class DogConfiguration : IEntityTypeConfiguration<Dog>
 {
     public void Configure(EntityTypeBuilder<Dog> builder)
     {
-        //builder.HasMany(x => x.Owners)
-        //    .WithMany(x => x.Dogs);
     }
 }
 
