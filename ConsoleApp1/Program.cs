@@ -53,5 +53,6 @@ class PersonConfiguration : IEntityTypeConfiguration<Person>
         builder.Property(x => x.Name)
             .HasMaxLength(100)
             .IsUnicode();
+        builder.ToTable("Owners");
     }
 }
